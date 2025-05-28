@@ -1,5 +1,6 @@
 import logging_wrapper
 
+
 log = logging_wrapper.LoggingWrapper().get_logger(__name__)
 
 
@@ -28,15 +29,3 @@ class TextReader:
         except Exception as e:
             log.exception(e)
             return ""
-
-    def read_lines(self, encoding="utf-8"):
-        """
-        Reads the text file line by line.
-        :return: A list of lines from the text file.
-        """
-        try:
-            with open(self._path, "r", encoding=encoding) as file:
-                return file.readlines()
-        except Exception as e:
-            log.exception(e)
-            return []

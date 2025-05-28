@@ -35,12 +35,12 @@ class WhatsNewReader:
         """
 
         contents = self._reader.read(encoding="utf-16")
-        sp_version = self.get_service_pack_version(contents)
-        cfg_version = self.get_configurator_version(contents)
+        sp_version = self.__get_service_pack_version(contents)
+        cfg_version = self.__get_configurator_version(contents)
 
         return sp_version, cfg_version
 
-    def get_service_pack_version(self, contents=str):
+    def __get_service_pack_version(self, contents=str):
         """
         Extracts the service pack version from the contents
 
@@ -50,12 +50,13 @@ class WhatsNewReader:
 
         match = re.search(SERVICE_PACK_VERSION_REGEX, contents)
         if match:
+            # TODO expose naming convesion into a config file
             return f"SP{match.group(0).split(' ')[1]}"
         else:
             log.error("Service Pack version not found.")
             return None
 
-    def get_configurator_version(self, contents=str):
+    def __get_configurator_version(self, contents=str):
         """
         Extracts the configurator version from the contents
 
@@ -65,6 +66,7 @@ class WhatsNewReader:
 
         match = re.search(CONFIGURATOR_VERSION_REGEX, contents)
         if match:
+            # TODO expose naming convesion into a config file
             return f"CFG{match.group(0).split(' ')[1]}"
         else:
             log.error("Configurator version not found.")
