@@ -1,10 +1,10 @@
 import re
 
-import logging_wrapper
-import file_system
+from logging_wrapper import LoggingWrapper
+from file_system import FileSystem
 
 
-log = logging_wrapper.LoggingWrapper().get_logger(__name__)
+log = LoggingWrapper().get_logger(__name__)
 
 
 class HspConfigs:
@@ -15,14 +15,14 @@ class HspConfigs:
     def __init__(self, configs_path):
         self._configs_path = configs_path
 
-    def get_hsp_version(self):
+    def get_hsp_version(self) -> str:
         """
         Extracts the HSP version from the fwut log file.
 
         :return: The HSP version as a string.
         """
-        latest = file_system.FileSystem.get_recent_directory(self._configs_path)
-        numbers = re.findall(r"(\d+)", latest)
+        recent = FileSystem.get_recent_directory(self._configs_path)
+        numbers = re.findall(r"(\d+)", recent)
         if not numbers:
             log.error("No version numbers found in the directory name.")
             return None

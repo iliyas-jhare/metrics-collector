@@ -1,7 +1,7 @@
-import logging_wrapper
+from logging_wrapper import LoggingWrapper
 
 
-log = logging_wrapper.LoggingWrapper().get_logger(__name__)
+log = LoggingWrapper().get_logger(__name__)
 
 
 class TextReader:
@@ -18,7 +18,7 @@ class TextReader:
 
         self._path = path
 
-    def read(self, encoding="utf-8"):
+    def read(self, encoding="utf-8") -> str:
         """
         Reads the entire content of the text file.
         :return: The content of the text file as a string.
@@ -28,4 +28,4 @@ class TextReader:
                 return file.read()
         except Exception as e:
             log.exception(e)
-            return ""
+            return None

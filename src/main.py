@@ -1,12 +1,23 @@
 import os
 import argparse
 
-import logging_wrapper
-import whats_new_reader
-import hsp_configs
-import file_system
+from logging_wrapper import LoggingWrapper
+from whats_new_parser import WhatsNewParser
+from hsp_configs import HspConfigs
+from file_system import FileSystem
+from svn_commands import SvnCommands
 
-log = logging_wrapper.LoggingWrapper().get_logger(__name__)
+
+snv_file_props = {
+    "etas:confidentiality": "internal",
+    "etas:owner": "XXXXXXXX",
+    "etas:pm_project_nr": "10688",
+    "etas:project_title": "ES820",
+    "etas:review_state": "draft",
+}
+
+
+log = LoggingWrapper().get_logger(__name__)
 
 
 # TODO - most of the argument should be exposed into a config file
@@ -46,16 +57,14 @@ def get_arguments():
 
 
 def main(args):
-    log.info("Started.")
-
     # Service Pack and Configurator Version
-    whats_new = whats_new_reader.WhatsNewReader(args.whats_new_path)
+    whats_new = WhatsNewParser(args.whats_new_path)
     sp_version, cfg_version = whats_new.get_service_pack_and_configurator_version()
     log.info(f"Service Pack Version: {sp_version}")
     log.info(f"Configurator Version: {cfg_version}")
 
     # HSP Update Tool Version
-    configs = hsp_configs.HspConfigs(args.hsp_configs_path)
+    configs = HspConfigs(args.hsp_configs_path)
     hsp_version = configs.get_hsp_version()
     log.info(f"HSP Version: {hsp_version}")
 
@@ -63,9 +72,7 @@ def main(args):
     if not os.path.exists(args.metrics_source_path):
         log.error(f"Metrics source path does not exist: {args.metrics_source_path}")
         return
-    source_path = file_system.FileSystem.get_directory(
-        args.metrics_source_path, sp_version
-    )
+    source_path = FileSystem.get_directory(args.metrics_source_path, sp_version)
     if not os.path.exists(source_path):
         log.error(f"Metrics source directory does not exist: {source_path}")
         return
@@ -84,19 +91,37 @@ def main(args):
 
     # Copy metrics
     log.info("Copying metrics...")
-    file_system.FileSystem.copytree(
-        src=source_path, dst=destination_path, dirs_exist_ok=True
-    )
+    if (
+        FileSystem.copytree(src=source_path, dst=destination_path, dirs_exist_ok=True)
+        is None
+    ):
+        log.error(f"Failed to copy metrics from {source_path} to {destination_path}")
+        return
 
-    # TODO add to SVN
-    # TODO import SVN props for all the metrics
-    # TODO commit to SVN
+    # Add metrics to SVN repo
+    log.info("Adding metrics to SVN repo...")
+    if SvnCommands.add(destination_path) is None:
+        log.error(f"Failed to add {destination_path} to SVN repo")
+        return
 
-    log.info("Finshed.")
+    # Set SVN file properties
+    log.info("Setting SVN file properties...")
+    for root, _, files in os.walk(destination_path):
+        for file in files:
+            file_path = os.path.join(root, file)
+            SvnCommands.propset2(file_path, snv_file_props)
+
+    # Commit SVN changes
+    log.info("Committing changes to SVN repo...")
+    commit_message = f"PAT metrics collected: {cfg_version} {sp_version} {hsp_version}"
+    if SvnCommands.commit(destination_path, commit_message) is None:
+        log.error(f"Failed to commit changes to SVN repo for {destination_path}")
 
 
 if __name__ == "__main__":
     try:
+        log.info("Started.")
         main(get_arguments())
+        log.info("Finished.")
     except Exception as e:
         log.exception(e)

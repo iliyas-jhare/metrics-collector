@@ -1,10 +1,10 @@
 import os
 import shutil
 
-import logging_wrapper
+from logging_wrapper import LoggingWrapper
 
 
-log = logging_wrapper.LoggingWrapper().get_logger(__name__)
+log = LoggingWrapper().get_logger(__name__)
 
 
 class FileSystem:
@@ -13,7 +13,7 @@ class FileSystem:
     """
 
     @staticmethod
-    def get_recent_directory(path):
+    def get_recent_directory(path) -> str:
         """
         Returns the most recent directory in the specified path.
 
@@ -35,7 +35,7 @@ class FileSystem:
         )[0]
 
     @staticmethod
-    def get_directory(path, search):
+    def get_directory(path, search) -> str:
         """
         Returns the directory that matches the search pattern.
 
@@ -54,7 +54,7 @@ class FileSystem:
         return None
 
     @staticmethod
-    def copytree(src, dst, dirs_exist_ok=False):
+    def copytree(src, dst, dirs_exist_ok=False) -> str:
         """
         Copies a directory tree from source to destination.
 
@@ -63,8 +63,10 @@ class FileSystem:
         :param dirs_exist_ok: If True, allows the destination directory to exist.
         """
         try:
-            shutil.copytree(src, dst, dirs_exist_ok=dirs_exist_ok)
-            log.info(f"Copied directory tree. From={src}, To={dst}")
-        except Exception as e:
+            ret = shutil.copytree(src, dst, dirs_exist_ok=dirs_exist_ok)
+            if ret:
+                log.info(f"Copied directory tree. From={src}, To={dst}")
+            return ret
+        except shutil.Error as e:
             log.exception(f"Failed to copy directory tree: {e}")
             raise

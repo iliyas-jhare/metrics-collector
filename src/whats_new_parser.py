@@ -1,6 +1,6 @@
 import re
 
-import logging_wrapper
+from logging_wrapper import LoggingWrapper
 import text_reader
 
 # TODO - Fetch from a config file for better user experience instead of hardcoding
@@ -8,10 +8,10 @@ SERVICE_PACK_VERSION_REGEX = r"<b>ServicePack:</b> \d+.\d+.\d+.\d+.\d+"
 CONFIGURATOR_VERSION_REGEX = r"<b>Configurator:</b> \d+.\d+.\d+.\d+"
 
 
-log = logging_wrapper.LoggingWrapper().get_logger(__name__)
+log = LoggingWrapper().get_logger(__name__)
 
 
-class WhatsNewReader:
+class WhatsNewParser:
     """
     A class to read the "What's New" text file for the Drive Recorder tool.
     This class provides methods to read the entire content of the file or read it line by line.
@@ -27,7 +27,7 @@ class WhatsNewReader:
         self._path = path
         self._reader = text_reader.TextReader(path)
 
-    def get_service_pack_and_configurator_version(self):
+    def get_service_pack_and_configurator_version(self) -> tuple:
         """
         Extracts both the service pack and configurator versions from the "What's New" text file.
 
@@ -40,7 +40,7 @@ class WhatsNewReader:
 
         return sp_version, cfg_version
 
-    def __get_service_pack_version(self, contents=str):
+    def __get_service_pack_version(self, contents=str) -> str:
         """
         Extracts the service pack version from the contents
 
@@ -56,7 +56,7 @@ class WhatsNewReader:
             log.error("Service Pack version not found.")
             return None
 
-    def __get_configurator_version(self, contents=str):
+    def __get_configurator_version(self, contents=str) -> str:
         """
         Extracts the configurator version from the contents
 
