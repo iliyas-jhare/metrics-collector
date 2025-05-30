@@ -1,3 +1,5 @@
+from anyio import open_file
+
 from logging_wrapper import LoggingWrapper
 
 
@@ -18,14 +20,14 @@ class TextReader:
 
         self._path = path
 
-    def read(self, encoding="utf-8") -> str:
+    async def read_async(self, encoding="utf-8") -> str:
         """
         Reads the entire content of the text file.
         :return: The content of the text file as a string.
         """
         try:
-            with open(self._path, "r", encoding=encoding) as file:
-                return file.read()
+            async with await open_file(self._path, "r", encoding=encoding) as file:
+                return await file.read()
         except Exception as e:
             log.exception(e)
             return None

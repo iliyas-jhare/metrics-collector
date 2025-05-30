@@ -32,31 +32,33 @@ class WhatsNewParser:
         self._sp_version = sp_version
         self._reader = text_reader.TextReader(path)
 
-    def get_service_pack_and_configurator_version(self) -> tuple:
+    async def get_service_pack_and_configurator_version(self) -> tuple:
         """
         Extracts both the service pack and configurator versions from the "What's New" text file.
 
         :return: A tuple containing the service pack version and configurator version as strings.
         """
 
-        contents = self._reader.read(encoding="utf-16")
+        sp_version = self._sp_version
+        cfg_version = None
+        contents = await self._reader.read_async(encoding="utf-16")
         if contents is None:
             log.error("Failed to read the contents of the 'What's New' file.")
-            return None, None
+            return sp_version, cfg_version
 
         map = self.__create_version_map(contents)
         if not map:
             log.error("No service pack or configurator version found in the contents.")
-            return None, None
+            return sp_version, cfg_version
 
-        if value := map.get(self._sp_version):
-            return self._sp_version, value
+        if self._sp_version in map:
+            sp_version = self._sp_version
+            cfg_version = map[self._sp_version]
         else:
-            key = list(map)[0]
-            value = list(map.values())[0]
-            return key, value
+            sp_version = list(map)[0]
+            cfg_version = list(map.values())[0]
 
-        return None, None
+        return sp_version, cfg_version
 
     def __create_version_map(self, contents=str) -> dict:
         """
@@ -75,23 +77,12 @@ class WhatsNewParser:
         key = None
         value = None
         for tag in html_tags:
-            key = self.__get_version(tag)
-            value = self.__get_version(tag)
+            if "ServicePack:" in tag:
+                key = f"SP{re.search(SP_VERSION_REGEX, tag).group(0)}"
+            elif "Configurator:" in tag:
+                value = f"CFG{re.search(CFG_VERSION_REGEX, tag).group(0)}"
             if key and value:
                 map[key] = value
                 key = None
                 value = None
         return map
-
-    def __get_version(self, tag=str) -> str:
-        """
-        Extracts the version from the given HTML tag.
-
-        :param tag: The HTML tag containing the version information.
-        :return: The extracted version as a string.
-        """
-        if "ServicePack:" in tag:
-            return f"SP{re.search(SP_VERSION_REGEX, tag).group(0)}"
-        elif "Configurator:" in tag:
-            return f"CFG{re.search(CFG_VERSION_REGEX, tag).group(0)}"
-        return None

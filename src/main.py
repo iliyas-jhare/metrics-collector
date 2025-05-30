@@ -1,6 +1,8 @@
 import os
 import argparse
 
+from anyio import run
+
 from logging_wrapper import LoggingWrapper
 from whats_new_parser import WhatsNewParser
 from hsp_configs import HspConfigs
@@ -62,10 +64,13 @@ def get_arguments():
     return parser.parse_args()
 
 
-def main(args):
+async def main(args):
     # Service Pack and Configurator Version
     whats_new = WhatsNewParser(args.whats_new_path, args.sp_version)
-    sp_version, cfg_version = whats_new.get_service_pack_and_configurator_version()
+    (
+        sp_version,
+        cfg_version,
+    ) = await whats_new.get_service_pack_and_configurator_version()
     log.info(f"Service Pack Version: {sp_version}")
     log.info(f"Configurator Version: {cfg_version}")
 
@@ -127,7 +132,7 @@ def main(args):
 if __name__ == "__main__":
     try:
         log.info("Started.")
-        main(get_arguments())
+        run(main, get_arguments())
         log.info("Finished.")
     except Exception as e:
         log.exception(e)
