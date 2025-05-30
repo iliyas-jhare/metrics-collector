@@ -27,7 +27,19 @@ def get_arguments():
     :return: Parsed arguments.
     """
     parser = argparse.ArgumentParser(
-        description="Metrics Collector for the Drive Recorder"
+        description="Metrics Collector for the Drive Recorder PAT"
+    )
+    parser.add_argument(
+        "--sp-version",
+        type=str,
+        required=False,
+        help="Drive Recorder Service Pack version, e.g., SP7.5.5.0.1",
+    )
+    parser.add_argument(
+        "--metrics-destination-path",
+        type=str,
+        required=True,
+        help="Path to the destination directory of the metrics.",
     )
     parser.add_argument(
         "--whats-new-path",
@@ -47,18 +59,12 @@ def get_arguments():
         default=r"D:\\Workspace\\TestMetrics",
         help="Path to the source directory of the metrics.",
     )
-    parser.add_argument(
-        "--metrics-destination-path",
-        type=str,
-        required=True,
-        help="Path to the destination directory of the metrics.",
-    )
     return parser.parse_args()
 
 
 def main(args):
     # Service Pack and Configurator Version
-    whats_new = WhatsNewParser(args.whats_new_path)
+    whats_new = WhatsNewParser(args.whats_new_path, args.sp_version)
     sp_version, cfg_version = whats_new.get_service_pack_and_configurator_version()
     log.info(f"Service Pack Version: {sp_version}")
     log.info(f"Configurator Version: {cfg_version}")

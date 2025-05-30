@@ -4,8 +4,11 @@ from logging_wrapper import LoggingWrapper
 import text_reader
 
 # TODO - Fetch from a config file for better user experience instead of hardcoding
-SERVICE_PACK_VERSION_REGEX = r"<b>ServicePack:</b> \d+.\d+.\d+.\d+.\d+"
-CONFIGURATOR_VERSION_REGEX = r"<b>Configurator:</b> \d+.\d+.\d+.\d+"
+HTML_TAGS_VERSION_REGEX = (
+    r"(<b>ServicePack:</b> \d+.\d+.\d+.\d+.\d+|<b>Configurator:</b> \d+.\d+.\d+.\d+)"
+)
+SP_VERSION_REGEX = r"\d+.\d+.\d+.\d+.\d+"
+CFG_VERSION_REGEX = r"\d+.\d+.\d+.\d+"
 
 
 log = LoggingWrapper().get_logger(__name__)
@@ -17,14 +20,16 @@ class WhatsNewParser:
     This class provides methods to read the entire content of the file or read it line by line.
     """
 
-    def __init__(self, path):
+    def __init__(self, path=str, sp_version=str):
         """
         Initializes the DriveRecorderWhatsNewReader with the specified file path.
 
         :param path: The path to the "What's New" text file.
+        :param sp_version: The service pack version to be used if not found in the file.
         """
 
         self._path = path
+        self._sp_version = sp_version
         self._reader = text_reader.TextReader(path)
 
     def get_service_pack_and_configurator_version(self) -> tuple:
@@ -35,39 +40,58 @@ class WhatsNewParser:
         """
 
         contents = self._reader.read(encoding="utf-16")
-        sp_version = self.__get_service_pack_version(contents)
-        cfg_version = self.__get_configurator_version(contents)
+        if contents is None:
+            log.error("Failed to read the contents of the 'What's New' file.")
+            return None, None
 
-        return sp_version, cfg_version
+        map = self.__create_version_map(contents)
+        if not map:
+            log.error("No service pack or configurator version found in the contents.")
+            return None, None
 
-    def __get_service_pack_version(self, contents=str) -> str:
+        if value := map.get(self._sp_version):
+            return self._sp_version, value
+        else:
+            key = list(map)[0]
+            value = list(map.values())[0]
+            return key, value
+
+        return None, None
+
+    def __create_version_map(self, contents=str) -> dict:
         """
-        Extracts the service pack version from the contents
+        Creates a dictionary mapping service pack and configurator versions to their respective values.
 
         :param contents: The contents of the "What's New" text file as a string.
-        :return: The service pack version as a string.
+        :return: A dictionary with service pack and configurator versions.
         """
 
-        match = re.search(SERVICE_PACK_VERSION_REGEX, contents)
-        if match:
-            # TODO expose naming convesion into a config file
-            return f"SP{match.group(0).split(' ')[1]}"
-        else:
-            log.error("Service Pack version not found.")
-            return None
+        map = {}
+        html_tags = re.findall(HTML_TAGS_VERSION_REGEX, contents)
+        if not html_tags:
+            log.error("No service pack or configurator version found in the contents.")
+            return map
 
-    def __get_configurator_version(self, contents=str) -> str:
+        key = None
+        value = None
+        for tag in html_tags:
+            key = self.__get_version(tag)
+            value = self.__get_version(tag)
+            if key and value:
+                map[key] = value
+                key = None
+                value = None
+        return map
+
+    def __get_version(self, tag=str) -> str:
         """
-        Extracts the configurator version from the contents
+        Extracts the version from the given HTML tag.
 
-        :param contents: The contents of the "What's New" text file as a string.
-        :return: The configurator version as a string.
+        :param tag: The HTML tag containing the version information.
+        :return: The extracted version as a string.
         """
-
-        match = re.search(CONFIGURATOR_VERSION_REGEX, contents)
-        if match:
-            # TODO expose naming convesion into a config file
-            return f"CFG{match.group(0).split(' ')[1]}"
-        else:
-            log.error("Configurator version not found.")
-            return None
+        if "ServicePack:" in tag:
+            return f"SP{re.search(SP_VERSION_REGEX, tag).group(0)}"
+        elif "Configurator:" in tag:
+            return f"CFG{re.search(CFG_VERSION_REGEX, tag).group(0)}"
+        return None
