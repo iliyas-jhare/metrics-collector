@@ -1,0 +1,32 @@
+{
+    "DriveRecorderWhatsNewPath": "//fe00fs70.de.bosch.com/ES715_20/ES820/GENESIS/v7.5.5/SP/WhatsNew.html",
+    "HspConfigsPath": "C:/ETASData/HSP/Configs",
+    "TestMetricsSourcePath": "D:/Workspace/TestMetrics",
+    "TestMetricsDestinationPath": "D:/ES820_PAT_Report/V7.5.5/QA2/PAT/Metrics/Weekly Tests/ST2",
+    "SvnFileProperties": [
+        {
+            "name": "etas:confidentiality",
+            "value": "internal"
+        },
+        {
+            "name": "etas:owner",
+            "value": "XXXXXXXX"
+        },
+        {
+            "name": "etas:pm_project_nr",
+            "value": "10688"
+        },
+        {
+            "name": "etas:project_title",
+            "value": "ES820"
+        },
+        {
+            "name": "etas:review_state",
+            "value": "draft"
+        }
+    ],
+    "ServicePackNamingStyle": "SP${VERSION}",
+    "ConfiguratorNamingStyle": "CFG${VERSION}",
+    "HSPNamingStyle": "HSP${VERSION}",
+    "MetricsDirectoryNamingStyle": "DRVR_${CFG_VERSION}_${SP_VERSION}_${HSP_VERSION}"
+}

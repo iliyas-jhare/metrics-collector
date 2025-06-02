@@ -50,7 +50,7 @@ class FileSystem:
             if os.path.isdir(os.path.join(path, d)) and search and d.endswith(search):
                 return os.path.join(path, d)
 
-        log.error(f"No directory found matching: {search}")
+        log.error(f"No directory found matching: {search} in path: {path}")
         return None
 
     @staticmethod

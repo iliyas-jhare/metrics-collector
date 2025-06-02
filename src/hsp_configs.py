@@ -12,8 +12,9 @@ class HspConfigs:
     Class to handle HSP configurations by reading.
     """
 
-    def __init__(self, configs_path):
+    def __init__(self, configs_path: str, hsp_naming_style: str):
         self._configs_path = configs_path
+        self._hsp_naming_style = hsp_naming_style
 
     def get_hsp_version(self) -> str:
         """
@@ -30,4 +31,5 @@ class HspConfigs:
         # Remove first number as it is not part of the HSP version
         numbers = numbers[1:]
         version = ".".join(numbers)
-        return f"HSP{version}"
+        name = self._hsp_naming_style.replace("${VERSION}", version)
+        return name

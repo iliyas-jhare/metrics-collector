@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/main.py",
             "console": "integratedTerminal",
-            "args": "--metrics-source-path C:/Metrics/Source --metrics-destination-path C:/Metrics/Destination"
+            "args": "--config-path src/config.json"
         }
     ]
 }

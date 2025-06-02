@@ -20,16 +20,22 @@ class WhatsNewParser:
     This class provides methods to read the entire content of the file or read it line by line.
     """
 
-    def __init__(self, path=str, sp_version=str):
+    def __init__(
+        self, path=str, sp_version=str, sp_naming_style=str, cfg_naming_style=str
+    ):
         """
         Initializes the DriveRecorderWhatsNewReader with the specified file path.
 
         :param path: The path to the "What's New" text file.
         :param sp_version: The service pack version to be used if not found in the file.
+        :param sp_naming_style: The naming style for the service pack version.
+        :param cfg_naming_style: The naming style for the configurator version.
         """
 
         self._path = path
         self._sp_version = sp_version
+        self._sp_naming_style = sp_naming_style
+        self._cfg_naming_style = cfg_naming_style
         self._reader = text_reader.TextReader(path)
 
     async def get_service_pack_and_configurator_version(self) -> tuple:
@@ -78,9 +84,13 @@ class WhatsNewParser:
         value = None
         for tag in html_tags:
             if "ServicePack:" in tag:
-                key = f"SP{re.search(SP_VERSION_REGEX, tag).group(0)}"
+                key = self._sp_naming_style.replace(
+                    "${VERSION}", re.search(SP_VERSION_REGEX, tag).group(0)
+                )
             elif "Configurator:" in tag:
-                value = f"CFG{re.search(CFG_VERSION_REGEX, tag).group(0)}"
+                value = self._cfg_naming_style.replace(
+                    "${VERSION}", re.search(CFG_VERSION_REGEX, tag).group(0)
+                )
             if key and value:
                 map[key] = value
                 key = None

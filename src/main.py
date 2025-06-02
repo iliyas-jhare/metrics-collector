@@ -4,25 +4,16 @@ import argparse
 from anyio import run
 
 from logging_wrapper import LoggingWrapper
+from config import Config
 from whats_new_parser import WhatsNewParser
 from hsp_configs import HspConfigs
 from file_system import FileSystem
 from svn_commands import SvnCommands
 
 
-snv_file_props = {
-    "etas:confidentiality": "internal",
-    "etas:owner": "XXXXXXXX",
-    "etas:pm_project_nr": "10688",
-    "etas:project_title": "ES820",
-    "etas:review_state": "draft",
-}
-
-
 log = LoggingWrapper().get_logger(__name__)
 
 
-# TODO - most of the argument should be exposed into a config file
 def get_arguments():
     """
     Parses command line arguments.
@@ -32,41 +23,36 @@ def get_arguments():
         description="Metrics Collector for the Drive Recorder PAT"
     )
     parser.add_argument(
+        "--config-path",
+        type=str,
+        default="config.json",
+        help="Path to the tool configuration file.",
+    )
+    parser.add_argument(
         "--sp-version",
         type=str,
-        required=False,
-        help="Drive Recorder Service Pack version, e.g., SP7.5.5.0.1",
+        help="Drive Recorder Service Pack version. If not provided, it will be the latest from the 'What's New' file.",
     )
     parser.add_argument(
-        "--metrics-destination-path",
+        "--commit-msg",
         type=str,
-        required=True,
-        help="Path to the destination directory of the metrics.",
-    )
-    parser.add_argument(
-        "--whats-new-path",
-        type=str,
-        default=r"\\fe00fs70.de.bosch.com\\ES715_20\\ES820\\GENESIS\\v7.5.5\\SP\\WhatsNew.html",
-        help="Path to the Drive Recorder's 'What's New' HTML file.",
-    )
-    parser.add_argument(
-        "--hsp-configs-path",
-        type=str,
-        default=r"C:\\ETASData\\HSP\\Configs",
-        help="Path to the HSP configurations directory.",
-    )
-    parser.add_argument(
-        "--metrics-source-path",
-        type=str,
-        default=r"D:\\Workspace\\TestMetrics",
-        help="Path to the source directory of the metrics.",
+        default="Add test metrics",
+        help="Commit message for the SVN repo.",
     )
     return parser.parse_args()
 
 
 async def main(args):
+    # Load configuration
+    config = await Config.load_json(args.config_path)
+
     # Service Pack and Configurator Version
-    whats_new = WhatsNewParser(args.whats_new_path, args.sp_version)
+    whats_new = WhatsNewParser(
+        config.DriveRecorderWhatsNewPath,
+        args.sp_version,
+        config.ServicePackNamingStyle,
+        config.ConfiguratorNamingStyle,
+    )
     (
         sp_version,
         cfg_version,
@@ -75,25 +61,30 @@ async def main(args):
     log.info(f"Configurator Version: {cfg_version}")
 
     # HSP Update Tool Version
-    configs = HspConfigs(args.hsp_configs_path)
+    configs = HspConfigs(config.HspConfigsPath, config.HSPNamingStyle)
     hsp_version = configs.get_hsp_version()
     log.info(f"HSP Version: {hsp_version}")
 
     # Metrics source
-    if not os.path.exists(args.metrics_source_path):
-        log.error(f"Metrics source path does not exist: {args.metrics_source_path}")
+    if not os.path.exists(config.TestMetricsSourcePath):
+        log.error(
+            f"Test metrics source path does not exist: {config.TestMetricsSourcePath}"
+        )
         return
-    source_path = FileSystem.get_directory(args.metrics_source_path, sp_version)
+    source_path = FileSystem.get_directory(config.TestMetricsSourcePath, sp_version)
     if not os.path.exists(source_path):
-        log.error(f"Metrics source directory does not exist: {source_path}")
+        log.error(f"Test metrics source directory does not exist: {source_path}")
         return
     else:
-        log.info(f"Metrics source directory: {source_path}")
+        log.info(f"Test metrics source directory: {source_path}")
 
     # Metrics destination
-    # TODO expose naming format into a config file
-    destination_name = "_".join(["DRVR", cfg_version, sp_version, hsp_version])
-    destination_path = os.path.join(args.metrics_destination_path, destination_name)
+    destination_name = (
+        config.MetricsDirectoryNamingStyle.replace("${CFG_VERSION}", cfg_version)
+        .replace("${SP_VERSION}", sp_version)
+        .replace("${HSP_VERSION}", hsp_version)
+    )
+    destination_path = os.path.join(config.TestMetricsDestinationPath, destination_name)
     if not os.path.exists(destination_path):
         os.makedirs(destination_path)
         log.info(f"Created destination directory: {destination_path}")
@@ -101,7 +92,7 @@ async def main(args):
         log.info(f"Destination directory already exists: {destination_path}")
 
     # Copy metrics
-    log.info("Copying metrics...")
+    log.info("Copying test metrics...")
     if (
         FileSystem.copytree(src=source_path, dst=destination_path, dirs_exist_ok=True)
         is None
@@ -117,15 +108,20 @@ async def main(args):
 
     # Set SVN file properties
     log.info("Setting SVN file properties...")
+    file_props = Config.get_svn_file_properties(config)
     for root, _, files in os.walk(destination_path):
         for file in files:
             file_path = os.path.join(root, file)
-            SvnCommands.propset2(file_path, snv_file_props)
+            SvnCommands.propset2(file_path, file_props)
 
     # Commit SVN changes
     log.info("Committing changes to SVN repo...")
-    commit_message = f"PAT metrics collected: {cfg_version} {sp_version} {hsp_version}"
-    if SvnCommands.commit(destination_path, commit_message) is None:
+    msg = (
+        args.commit_msg
+        if args.commit_msg
+        else f"{args.commit_msg}: {cfg_version} {sp_version} {hsp_version}"
+    )
+    if SvnCommands.commit(destination_path, msg) is None:
         log.error(f"Failed to commit changes to SVN repo for {destination_path}")
 
 
